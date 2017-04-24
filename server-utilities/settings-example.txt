@@ -1,0 +1,12 @@
+****************************************
+* DO NOT USE THIS FILE AS SETTINGS.TXT *
+****************************************
+
+settings.txt will contain the following 6 values:
+
+DE	DEFAULT: EN	Language code used for localization. Supported are "DE" and "EN".
+True	DEFAULT: True	Enable or disable all notifications about usage of "pull" command.
+5	DEFAULT: 3	The permission level of the player group which shall be notified about "pull" usage. (includes all groups above)
+True	DEFAULT: True	Enable global warnings (Sends all players the message: Player X has been warned by Y for Z)
+6	DEFAULT: 3	Notify every user having this (or a higher) permission level when a user is reported
+False	DEFAULT: True	Enable global notifications when a player vanishes/gets visible

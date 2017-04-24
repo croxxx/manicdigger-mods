@@ -19,7 +19,8 @@ Empty lines in announcements/the welcome message will be skipped.
 You can use a line containing just a whitespace to insert empty lines, if you need to.
 
 
-Available commands:
+### Available commands
+
 	/announcements on				 - Turns announcements on
 	/announcements off				 - Turns announcements off
 	/announcements welcome_on		 - Turns the welcome message on

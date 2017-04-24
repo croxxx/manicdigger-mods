@@ -20,10 +20,10 @@ For each zone different player roles may be assigned, that allow players managin
 - manager: Able to build in the zone. Can add new builders.
 - builder: Able to build in the zone.
 
-Users who are not allowed to build in a zone get displayed an error message.
+Users who are not allowed to build in a zone get displayed an error message.  
 ![](screen3.png)
 
-A list of all zones can be displayed using the command `/pr list`.
+A list of all zones can be displayed using the command `/pr list`.  
 ![](screen2.png)
 
 Optionally, a permission level can be set above which users can ignore defined zones. (By default 3: Admin rank)

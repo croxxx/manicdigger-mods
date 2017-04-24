@@ -21,12 +21,12 @@ You can use a line containing just a whitespace to insert empty lines, if you ne
 
 ### Available commands
 
-	/announcements on				 - Turns announcements on
-	/announcements off				 - Turns announcements off
-	/announcements welcome_on		 - Turns the welcome message on
-	/announcements welcome_off		 - Turns the welcome message off
-	/announcements count [number]	 - Sets the total number of announcements
-	/announcements interval [number] - Sets the interval to display announcements (in minutes).
+	/announcements on                  Turns announcements on
+	/announcements off                 Turns announcements off
+	/announcements welcome_on          Turns the welcome message on
+	/announcements welcome_off         Turns the welcome message off
+	/announcements count [number]      Sets the total number of announcements
+	/announcements interval [number]   Sets the interval to display announcements (in minutes).
 
 These are also displayed when `/announcements help` is entered in chat.
 

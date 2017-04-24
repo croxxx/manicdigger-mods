@@ -13,10 +13,10 @@ Useful for cross-map copying.
 
 Following commands are added
 
-	/export start		 Sets the start point for the export area
-	/export end			 Sets the start point for the export area
-	/export save [name]	 Saves the marked area as "name.mdexp"
-	/import	[filename]	 Tries to import the file given
+	/export start         Sets the start point for the export area
+	/export end           Sets the start point for the export area
+	/export save [name]   Saves the marked area as "name.mdexp"
+	/import	[filename]    Tries to import the file given
 
 
 Installation

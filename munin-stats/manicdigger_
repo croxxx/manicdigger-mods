@@ -1,0 +1,117 @@
+#!/usr/bin/python
+"""
+Munin plugin to monitor Manic Digger Server statistics
+Plugin Version 1.1 - 2015-06-05
+Author: croxxx
+
+Installation:
+Copy this script to the directory of your other munin plugins
+(e.g. /usr/share/munin/plugins) and make it executeable (chmod +x).
+Then issue any of the following commands to enable the graphs:
+ln -s /usr/share/munin/plugins/manicdigger_ /etc/munin/plugins/manicdigger_players
+ln -s /usr/share/munin/plugins/manicdigger_ /etc/munin/plugins/manicdigger_blocks
+ln -s /usr/share/munin/plugins/manicdigger_ /etc/munin/plugins/manicdigger_chat
+"""
+
+import os, sys, urllib2
+
+STATUS_URL = os.environ.get('statusurl', 'http://127.0.0.1:25566/munin.stats')
+
+def print_config(param):
+	# generates and returns a munin config for a given chart
+	if param == 'players':
+		print 'graph_title Manic Digger player statistics'
+		print 'graph_category manicdigger'
+		print 'graph_vlabel players'
+		print 'graph_info Number of players online'
+		print 'players_max.label maximum player count'
+		print 'players_max.type GAUGE'
+		print 'players_max.draw AREA'
+		print 'players_max.min 0'
+		print 'players_online.label online players'
+		print 'players_online.type GAUGE'
+		print 'players_online.draw AREA'
+		print 'players_online.min 0'
+		print 'players_npc.label active npcs'
+		print 'players_npc.type GAUGE'
+		print 'players_npc.draw LINE2'
+		print 'players_npc.min 0'
+		print 'players_spectator.label players in spectator mode'
+		print 'players_spectator.type GAUGE'
+		print 'players_spectator.draw LINE2'
+		print 'players_spectator.min 0'
+	elif param == 'blocks':
+		print 'graph_title Manic Digger block statistics'
+		print 'graph_category manicdigger'
+		print 'graph_vlabel block changes'
+		print 'graph_info Number of blocks changed'
+		print 'blocks_placed.label placed blocks'
+		print 'blocks_placed.type GAUGE'
+		print 'blocks_placed.draw AREASTACK'
+		print 'blocks_placed.min 0'
+		print 'blocks_destroyed.label destroyed blocks'
+		print 'blocks_destroyed.type GAUGE'
+		print 'blocks_destroyed.draw AREASTACK'
+		print 'blocks_destroyed.min 0'
+		print 'blocks_used.label used blocks'
+		print 'blocks_used.type GAUGE'
+		print 'blocks_used.draw LINE2'
+		print 'blocks_used.min 0'
+	elif param == 'chat':
+		print 'graph_title Manic Digger chat statistics'
+		print 'graph_category manicdigger'
+		print 'graph_vlabel chat messages'
+		print 'graph_info Number of sent chat messages'
+		print 'sent_messages.label sent messages'
+		print 'sent_messages.type GAUGE'
+		print 'sent_messages.draw AREA'
+		print 'sent_messages.min 0'
+
+def print_status(param):
+	# this url is used as the base for multiple requests
+	global STATUS_URL
+	statuslist = urllib2.urlopen(STATUS_URL + '.' + param).readlines()
+
+	for entry in statuslist:
+		if len(entry) == 1 or entry[0] == '#':
+			continue
+		key, value = entry.split(': ')
+		if param == 'players':
+			if key == 'players_online':
+				print 'players_online.value %s' % (value)
+			elif key == 'players_npc':
+				print 'players_npc.value %s' % (value)
+			elif key == 'players_spectator':
+				print 'players_spectator.value %s' % (value)
+			elif key == 'players_max':
+				print 'players_max.value %s' % (value)
+		elif param == 'blocks':
+			if key == 'blocks_placed':
+				print 'blocks_placed.value %s' % (value)
+			elif key == 'blocks_destroyed':
+				print 'blocks_destroyed.value %s' % (value)
+			elif key == 'blocks_used':
+				print 'blocks_used.value %s' % (value)
+		elif param == 'chat':
+			if key == 'sent_messages':
+				print 'sent_messages.value %s' % (value)
+
+if __name__ == '__main__':
+	try:
+		param = os.path.split(sys.argv[0])[-1].split('_')[1]
+	except IndexError:
+		param = 'players'
+
+	if param not in ['players', 'blocks', 'chat']:
+		print 'unknown parameter %s' % (param)
+		sys.exit(1)
+
+	if len(sys.argv) > 1:
+		if sys.argv[1] == 'autoconf':
+			print 'yes'
+			sys.exit(0)
+		elif sys.argv[1] == 'config':
+			print_config(param)
+			sys.exit(0)
+
+	print_status(param)

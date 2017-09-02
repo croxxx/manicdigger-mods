@@ -1,6 +1,6 @@
 ﻿/*
- * Protection Mod - Version 1.1
- * last change: 2014-03-16
+ * Protection Mod - Version 1.2
+ * last change: 2017-09-02
  * Author: croxxx
  * 
  * This mod allows protection of certain areas. No players will be able to build there without permission.
@@ -9,17 +9,21 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.IO;
+using System.Xml;
+using System.Xml.Serialization;
 
 namespace ManicDigger.Mods
 {
 	public class Protection : IMod
 	{
-		//User default settings. Change them if you like.
-		//You can also do so in-game using the /protect_settings command.
-		string languageCode = "EN";     //Enter the desired language code here. Currently supported are EN and DE.
-		bool bAllowAdminIgnore = true;     //Enables or disables admins being able to build in any zone
-		int iAdminPermissionLevel = 3;        //Players of this group will be able to ignore zones
-		bool bDisplayPosition = true;     //Enable/Disable display of the owner when you enter a zone
+		// Desired language code. Currently supported are EN and DE.
+		string languageCode = "EN";
+		// Enables or disables admins being able to build in any zone
+		bool bAllowAdminIgnore = true;
+		// Players of this group will be able to ignore zones
+		int iAdminPermissionLevel = 3;
+		// Enable/Disable display of the owner when you enter a zone
+		bool bDisplayPosition = true;
 
 		public void PreStart(ModManager m) { }
 
@@ -35,14 +39,14 @@ namespace ManicDigger.Mods
 			m.RegisterCommandHelp("protect_settings", "Edit Mod settings.");
 			m.RegisterOnCommand(OnCommand);
 			m.RegisterTimer(CheckPlayerPosition, (double)1);
-			//m.RegisterOnLoad(OnLoad); //This does nothing!!
+			m.RegisterOnLoad(OnLoad);
 			m.RegisterOnSave(OnSave);
-			m.RegisterOnBlockBuild(AddBlock);
-			m.RegisterOnBlockDelete(DeleteBlock);
 
-			OnLoad();
+			m.RegisterCheckOnBlockBuild(CheckBlock);
+			m.RegisterCheckOnBlockDelete(CheckBlock);
+			// m.RegisterCheckOnBlockUse(CheckBlock);
 
-			System.Console.WriteLine("[Protection] Loaded Mod Version 1.0");
+			System.Console.WriteLine("[Protection] Loaded Mod Version 1.2");
 		}
 
 		//Internal variables.
@@ -57,7 +61,7 @@ namespace ManicDigger.Mods
 		Vector3i end_pos;
 		string end_setBy = "";
 
-		struct Vector3i
+		public struct Vector3i
 		{
 			public Vector3i(int x, int y, int z)
 			{
@@ -69,8 +73,13 @@ namespace ManicDigger.Mods
 			public int y;
 			public int z;
 		}
-		struct ProtectedZone
+		public class ProtectedZone
 		{
+			public ProtectedZone()
+			{
+				managers = new List<string>();
+				builders = new List<string>();
+			}
 			public ProtectedZone(string newName, string newOwner, Vector3i newStart, Vector3i newEnd)
 			{
 				if (newStart.x < newEnd.x)
@@ -713,34 +722,27 @@ namespace ManicDigger.Mods
 
 		void OnSave()
 		{
-			try
+			XmlSerializer serializer = new XmlSerializer(typeof(ProtectedZone));
+
+			foreach (var zone in protectedZones)
 			{
-				for (int i = 0; i < protectedZones.Count; i++)
+				// Replace all invalid characters wich an underscore
+				string fileName = sModDir + Path.DirectorySeparatorChar + string.Join("_", zone.name.Split(Path.GetInvalidFileNameChars())) + ".zone";
+
+				try
 				{
-					using (StreamWriter sw = new StreamWriter(sModDir + Path.DirectorySeparatorChar + protectedZones[i].name.ToLower().Replace(' ', '_') + ".zone"))
+					using (TextWriter sw = new StreamWriter(fileName))
 					{
-						sw.WriteLine(protectedZones[i].name);
-						sw.WriteLine(protectedZones[i].start.x + ";" + protectedZones[i].start.y + ";" + protectedZones[i].start.z);
-						sw.WriteLine(protectedZones[i].end.x + ";" + protectedZones[i].end.y + ";" + protectedZones[i].end.z);
-						sw.WriteLine(protectedZones[i].owner);
-						foreach (string manager in protectedZones[i].managers)
-						{
-							sw.Write(manager + ';');
-						}
-						sw.Write(sw.NewLine);
-						foreach (string builder in protectedZones[i].builders)
-						{
-							sw.Write(builder + ';');
-						}
-						sw.Write(sw.NewLine);
+						serializer.Serialize(sw, zone);
 					}
 				}
-				System.Console.WriteLine("[Protection] Saved all zones.");
+				catch (Exception ex)
+				{
+					System.Console.WriteLine("[Protection] ERROR while saving '{0}': {1}", fileName, ex.Message);
+				}
 			}
-			catch (Exception ex)
-			{
-				System.Console.WriteLine("[Protection] ERROR:  " + ex.Message);
-			}
+
+			System.Console.WriteLine("[Protection] Saved all zones.");
 		}
 
 		void OnLoad()
@@ -751,57 +753,77 @@ namespace ManicDigger.Mods
 				System.Console.WriteLine("[Protection] '" + sModDir + "' not found. Creating new.");
 				Directory.CreateDirectory(sModDir);
 			}
+
 			LoadSettings();
 			DirectoryInfo di = new DirectoryInfo(sModDir);
 			FileInfo[] files = di.GetFiles("*.zone");
+			XmlSerializer serializer = new XmlSerializer(typeof(ProtectedZone));
+
 			foreach (FileInfo fi in files)
 			{
 				try
 				{
-					using (TextReader tr = new StreamReader(fi.FullName, Encoding.UTF8))
+					using (FileStream fs = new FileStream(fi.FullName, FileMode.Open))
 					{
-						char[] separator = new char[1];
-						separator[0] = ';';
-						//First, read all data in the file that is needed.
-						string name = tr.ReadLine();
-						string startString = tr.ReadLine();
-						string endString = tr.ReadLine();
-						string owner = tr.ReadLine();
-						string managerString = tr.ReadLine();
-						string builderString = tr.ReadLine();
+						// Deserialize object from file
+						ProtectedZone loaded = (ProtectedZone)serializer.Deserialize(fs);
 
-						//Now process the vectors, as they are needed first
-						string[] split; //Array to hold stuff that's being parsed. reused for performance.
-						split = startString.Split(separator);
-						Vector3i start = new Vector3i(int.Parse(split[0]), int.Parse(split[1]), int.Parse(split[2]));
-						split = endString.Split(separator);
-						Vector3i end = new Vector3i(int.Parse(split[0]), int.Parse(split[1]), int.Parse(split[2]));
-
-						//Generate the ProtectedZone object we want to add later and already set the owner variable as it needs no additional processing
-						ProtectedZone loaded = new ProtectedZone(name, owner, start, end);
-
-						//Parse the manager and builder lists
-						split = managerString.Split(separator);
-						for (int i = 0; i < split.Length; i++)
-						{
-							if (!string.IsNullOrEmpty(split[i]))
-								loaded.managers.Add(split[i]);
-						}
-						split = builderString.Split(separator);
-						for (int i = 0; i < split.Length; i++)
-						{
-							if (!string.IsNullOrEmpty(split[i]))
-								loaded.builders.Add(split[i]);
-						}
-
-						//Finally add the new object to the list
+						// Add loaded object to the list
 						protectedZones.Add(loaded);
-						System.Console.WriteLine("[Protection] Loaded zone: " + loaded.name);
+						System.Console.WriteLine("[Protection] Loaded zone XML: " + loaded.name);
 					}
 				}
-				catch (Exception ex)
+				catch (Exception e)
 				{
-					System.Console.WriteLine("[Protection] ERROR:  " + ex.Message);
+					System.Console.WriteLine(e.Message);
+					System.Console.WriteLine("[Protection] WARNING: Could not parse zone file as XML. Trying old data format...");
+					try
+					{
+						using (TextReader tr = new StreamReader(fi.FullName, Encoding.UTF8))
+						{
+							char[] separator = new char[1];
+							separator[0] = ';';
+							//First, read all data in the file that is needed.
+							string name = tr.ReadLine();
+							string startString = tr.ReadLine();
+							string endString = tr.ReadLine();
+							string owner = tr.ReadLine();
+							string managerString = tr.ReadLine();
+							string builderString = tr.ReadLine();
+
+							//Now process the vectors, as they are needed first
+							string[] split; //Array to hold stuff that's being parsed. reused for performance.
+							split = startString.Split(separator);
+							Vector3i start = new Vector3i(int.Parse(split[0]), int.Parse(split[1]), int.Parse(split[2]));
+							split = endString.Split(separator);
+							Vector3i end = new Vector3i(int.Parse(split[0]), int.Parse(split[1]), int.Parse(split[2]));
+
+							//Generate the ProtectedZone object we want to add later and already set the owner variable as it needs no additional processing
+							ProtectedZone loaded = new ProtectedZone(name, owner, start, end);
+
+							//Parse the manager and builder lists
+							split = managerString.Split(separator);
+							for (int i = 0; i < split.Length; i++)
+							{
+								if (!string.IsNullOrEmpty(split[i]))
+									loaded.managers.Add(split[i]);
+							}
+							split = builderString.Split(separator);
+							for (int i = 0; i < split.Length; i++)
+							{
+								if (!string.IsNullOrEmpty(split[i]))
+									loaded.builders.Add(split[i]);
+							}
+
+							//Finally add the new object to the list
+							protectedZones.Add(loaded);
+							System.Console.WriteLine("[Protection] Loaded zone: " + loaded.name);
+						}
+					}
+					catch (Exception ex)
+					{
+						System.Console.WriteLine("[Protection] ERROR: " + ex.Message);
+					}
 				}
 			}
 			System.Console.WriteLine("[Protection] Finished loading.");
@@ -1382,7 +1404,7 @@ namespace ManicDigger.Mods
 			return false;
 		}
 
-		void AddBlock(int player, int x, int y, int z)
+		bool CheckBlock(int player, int x, int y, int z)
 		{
 			//Loop through all zones to find out if the block is in one
 			Vector3i pos = new Vector3i(x, y, z);
@@ -1392,32 +1414,15 @@ namespace ManicDigger.Mods
 				{
 					if (!IsPlayerPermittedToBuild(protectedZones[i], player))
 					{
-						//Player not allowed to build. Undo changes.
-						m.SetBlock(x, y, z, 0);     //Empty
+						// Player not allowed to build.
 						m.SendMessage(player, chatPrefix + m.colorError() + GetLocalizedString("error_build_noperm"));
+						return false;
 					}
-					return;
 				}
 			}
-		}
 
-		void DeleteBlock(int player, int x, int y, int z, int block)
-		{
-			//Loop through all zones to find out if the block is in one
-			Vector3i pos = new Vector3i(x, y, z);
-			for (int i = 0; i < protectedZones.Count; i++)
-			{
-				if (IsPositionInZone(protectedZones[i], pos))
-				{
-					if (!IsPlayerPermittedToBuild(protectedZones[i], player))
-					{
-						//Player not allowed to build. Undo changes.
-						m.SetBlock(x, y, z, block);
-						m.SendMessage(player, chatPrefix + m.colorError() + GetLocalizedString("error_build_noperm"));
-					}
-					return;
-				}
-			}
+			// Player either not in any zone or permitted to build in all zones they are in
+			return true;
 		}
 	}
 }

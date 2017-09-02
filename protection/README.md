@@ -1,7 +1,7 @@
-[![Mod version](https://img.shields.io/badge/mod_version-1.1-brightgreen.svg?style=flat-square)]()
-[![Mod release](https://img.shields.io/badge/release_date-2014--03--16-brightgreen.svg?style=flat-square)]()
+[![Mod version](https://img.shields.io/badge/mod_version-1.2-brightgreen.svg?style=flat-square)]()
+[![Mod release](https://img.shields.io/badge/release_date-2017--09--02-brightgreen.svg?style=flat-square)]()
 [![Mod status](https://img.shields.io/badge/mod_status-stable-brightgreen.svg?style=flat-square)]()
-[![Mod requirement](https://img.shields.io/badge/manicdigger_version->2014--02--01-brightgreen.svg?style=flat-square)]()
+[![Mod requirement](https://img.shields.io/badge/manicdigger_version->2015--10--14-brightgreen.svg?style=flat-square)]()
 
 Protection Mod by croxxx
 ========================
